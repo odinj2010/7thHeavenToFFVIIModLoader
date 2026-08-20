@@ -10,7 +10,7 @@ A lightweight, portable utility designed to convert unpacked or raw .iro 7th Hea
 - **Deep Path Matching**: Traverses directory structures of any depth to map assets correctly, making it fully compatible with custom extraction tools like **IroNite** or custom folder layouts.
 - **Interactive Mod Options (mod.xml)**: Parses 7th Heaven <Group> / <Option> and <ConfigOption> XML schemas to present clean option selection dialogs for variant choices (e.g. Character skins, battle models, menu styles).
 - **Zlib & LZMA Decompression**: Built-in support for standard zlib, raw DEFLATE streams (-MAX_WBITS), LZMA, and Gzip-compressed .iro entries.
-- **Automated Directory Mapping**: Maps 7th Heaven asset subfolders (char, ield, attle, magic, menu, world, music, sound, movies, minigames) directly into standard Mod Loader paths (mods/1ModLoaderPack/...).
+- **Automated Directory Mapping**: Maps 7th Heaven asset subfolders (char, field, battle, magic, menu, world, music, sound, movies, minigames) directly into standard Mod Loader paths (mods/1ModLoaderPack/...).
 - **Diagnostic Logging**: Clear log feedback and warnings if 0 files are copied or if folder structure mismatches occur.
 
 ---
@@ -33,12 +33,12 @@ A lightweight, portable utility designed to convert unpacked or raw .iro 7th Hea
 
 | 7th Heaven Subfolder | Target Mod Loader Path | Description |
 | :--- | :--- | :--- |
-| char, chocobo | ield/char/ | Field Character Models & Textures |
-| ield, level | ield/flevel/ | Field Backgrounds & Map Scripts |
+| char, chocobo | field/char/ | Field Character Models & Textures |
+| field, flevel | field/flevel/ | Field Backgrounds & Map Scripts |
 | world, wm | wm/world_us/ | World Map Models & Textures |
-| attle | attle/battle/ | Battle Models, Monsters & FX |
-| magic | attle/magic/ | Spell & Ability Effects |
-| stage | attle/stage/ | Battle Arena Environments |
+| battle | battle/battle/ | Battle Models, Monsters & FX |
+| magic | battle/magic/ | Spell & Ability Effects |
+| stage | battle/stage/ | Battle Arena Environments |
 | menu, menu_us | menu/menu_us/ | UI, Avatars & Font Textures |
 | music | music_ogg/ | High Quality OGG Audio Tracks |
 | sound | sound/ | Game Sound Effects |
