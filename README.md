@@ -4,7 +4,7 @@ A lightweight, portable utility designed to convert unpacked or raw .iro 7th Hea
 
 ---
 
-## Features
+## 🌟 Features
 
 - **Direct .iro Support**: Unpack and convert standard .iro archives on the fly without needing 7th Heaven installed.
 - **Deep Path Matching**: Traverses directory structures of any depth to map assets correctly, making it fully compatible with custom extraction tools like **IroNite** or custom folder layouts.
@@ -15,7 +15,7 @@ A lightweight, portable utility designed to convert unpacked or raw .iro 7th Hea
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 1. **Download**: Download ConvertForModLoader.exe from the [dist/](./dist/) folder or the latest GitHub Release.
 2. **Launch**: Run ConvertForModLoader.exe.
@@ -29,16 +29,16 @@ A lightweight, portable utility designed to convert unpacked or raw .iro 7th Hea
 
 ---
 
-## Supported Asset Mappings
+## 📁 Supported Asset Mappings
 
 | 7th Heaven Subfolder | Target Mod Loader Path | Description |
 | :--- | :--- | :--- |
 | char, chocobo | ield/char/ | Field Character Models & Textures |
-| field, level | ield/flevel/ | Field Backgrounds & Map Scripts |
+| ield, level | ield/flevel/ | Field Backgrounds & Map Scripts |
 | world, wm | wm/world_us/ | World Map Models & Textures |
-| battle | battle/battle/ | Battle Models, Monsters & FX |
-| magic | battle/magic/ | Spell & Ability Effects |
-| stage | battle/stage/ | Battle Arena Environments |
+| attle | attle/battle/ | Battle Models, Monsters & FX |
+| magic | attle/magic/ | Spell & Ability Effects |
+| stage | attle/stage/ | Battle Arena Environments |
 | menu, menu_us | menu/menu_us/ | UI, Avatars & Font Textures |
 | music | music_ogg/ | High Quality OGG Audio Tracks |
 | sound | sound/ | Game Sound Effects |
@@ -49,7 +49,7 @@ A lightweight, portable utility designed to convert unpacked or raw .iro 7th Hea
 
 ---
 
-## Building From Source
+## 🛠️ Building From Source
 
 Requirements:
 - Python 3.10+
@@ -63,8 +63,7 @@ The compiled standalone executable will be generated inside the dist/ directory.
 
 ---
 
-## License & Credits
+## 📜 License & Credits
 
 Developed by **NfgOdin** for the Final Fantasy VII modding community.
 - Compatible with the **FFVIISE Direct File Mod Loader (d3d11.dll)**.
-
