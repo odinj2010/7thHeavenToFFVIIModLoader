@@ -607,7 +607,13 @@ class ConverterGUI(tk.Tk):
                         self._log(f"Processing [{folders_processed}]: {top_level_mod_name}")
 
                     target_base = FOLDER_MAPPING[matching_key]
-                    sub_structure = os.path.join(*parts[matching_index + 1:]) if matching_index + 1 < len(parts) else ""
+                    remaining_parts = parts[matching_index + 1:] if matching_index + 1 < len(parts) else []
+                    
+                    # Prevent duplicate folder nesting (e.g. field/flevel/flevel -> field/flevel)
+                    if remaining_parts and remaining_parts[0].lower() == os.path.basename(target_base).lower():
+                        remaining_parts = remaining_parts[1:]
+                        
+                    sub_structure = os.path.join(*remaining_parts) if remaining_parts else ""
                     target_folder = os.path.join(dest_dir, target_base, sub_structure)
 
                     for file in files:
