@@ -5,6 +5,10 @@
 - Security: Implemented Zip-Slip path traversal protection in `IroArchive.extract_all` to validate destination target bounds.
 - Performance: Added context management (`__enter__` / `__exit__`) to `IroArchive` to reuse open file handles during batch extraction.
 - Stability: Added thread-safe `queue.Queue` log buffering and polling loop to eliminate UI thread race conditions.
+- Steam Auto-Detection: Automatically queries Windows Registry to locate Steam FFVII installation directory.
+- Direct Game Installation: Added `🎮 Copy to Steam mods/` GUI button to copy converted mod folders directly into the game's `mods/` directory with 1 click.
+- Real-Time Progress Bar: Integrated `ttk.Progressbar` and file count status indicator during conversion.
+- Conflict & Overwrite Warnings: Displays notice when converting into an existing output folder.
 
 ## [2.0.0] - 2026-08-20
 - Fixed `.iro` archive unpacking for `Remastered Backgrounds.iro` and similar mods by implementing proper bitmask checking (`flags & 1` for LZMA, `flags & 2` for Deflate/zlib).

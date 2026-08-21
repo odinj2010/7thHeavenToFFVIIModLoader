@@ -76,6 +76,32 @@ def get_default_source_dir():
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 
+def detect_ffvii_mods_dir():
+    try:
+        import winreg
+        steam_path = None
+        for subkey in [r'SOFTWARE\WOW6432Node\Valve\Steam', r'SOFTWARE\Valve\Steam']:
+            try:
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, subkey)
+                steam_path, _ = winreg.QueryValueEx(key, 'InstallPath')
+                winreg.CloseKey(key)
+                if steam_path:
+                    break
+            except Exception:
+                continue
+
+        if steam_path:
+            possible_paths = [
+                os.path.join(steam_path, "steamapps", "common", "FINAL FANTASY VII Steam Edition", "mods"),
+                os.path.join(steam_path, "steamapps", "common", "FINAL FANTASY VII", "mods"),
+            ]
+            for p in possible_paths:
+                if os.path.exists(os.path.dirname(p)): # If game dir exists
+                    return p
+    except Exception:
+        pass
+    return None
+
 def lzma_filters(props):
     d = props[0]
     lc = d % 9
@@ -410,19 +436,6 @@ class ConverterGUI(tk.Tk):
         self._build_ui()
         self._poll_log_queue()
 
-    def _poll_log_queue(self):
-        while not self.log_queue.empty():
-            try:
-                text = self.log_queue.get_nowait()
-                self.log_text.insert("end", text + "\n")
-                self.log_text.see("end")
-            except queue.Empty:
-                break
-        self.after(100, self._poll_log_queue)
-
-    def _log(self, text):
-        self.log_queue.put(text)
-
     def _build_ui(self):
         # Header
         header_frame = ttk.Frame(self)
@@ -471,9 +484,22 @@ class ConverterGUI(tk.Tk):
         self.btn_open_folder = ttk.Button(action_frame, text="📁 Open Output Folder", style="Secondary.TButton", command=self._open_output_folder, state="disabled")
         self.btn_open_folder.pack(side="right", pady=5, ipadx=5, ipady=4)
 
+        self.btn_copy_steam = ttk.Button(action_frame, text="🎮 Copy to Steam mods/", style="Secondary.TButton", command=self._copy_to_steam_mods, state="disabled")
+        self.btn_copy_steam.pack(side="right", padx=5, pady=5, ipadx=5, ipady=4)
+
+        # Progress bar
+        progress_frame = ttk.Frame(self)
+        progress_frame.pack(fill="x", padx=20, pady=(2, 5))
+
+        self.progress_bar = ttk.Progressbar(progress_frame, mode="determinate", value=0)
+        self.progress_bar.pack(fill="x", side="left", expand=True)
+
+        self.lbl_progress = ttk.Label(progress_frame, text="Ready", style="Header.TLabel", font=("Segoe UI", 8))
+        self.lbl_progress.pack(side="right", padx=(10, 0))
+
         # Log Window
         log_frame = ttk.Frame(self)
-        log_frame.pack(fill="both", expand=True, padx=20, pady=(10, 15))
+        log_frame.pack(fill="both", expand=True, padx=20, pady=(5, 15))
 
         self.log_text = tk.Text(log_frame, bg="#141418", fg="#d4d4dc", font=("Consolas", 9), relief="flat", wrap="word", highlightthickness=0)
         self.log_text.pack(side="left", fill="both", expand=True)
@@ -482,7 +508,35 @@ class ConverterGUI(tk.Tk):
         scrollbar.pack(side="right", fill="y")
         self.log_text.config(yscrollcommand=scrollbar.set)
 
+        # Check if Steam Mods folder auto-detected
+        steam_mods = detect_ffvii_mods_dir()
+        if steam_mods:
+            self._log(f"Auto-detected Steam FFVII Mods Folder:\n  {steam_mods}\n")
+
         self._log("Ready to convert. Select an .iro file or extracted mod folder and click 'Convert Modpack'.\n")
+
+    def _poll_log_queue(self):
+        while not self.log_queue.empty():
+            try:
+                item = self.log_queue.get_nowait()
+                if isinstance(item, tuple) and item[0] == "PROGRESS":
+                    val, total, text = item[1], item[2], item[3]
+                    if total > 0:
+                        pct = int((val / total) * 100)
+                        self.progress_bar['maximum'] = total
+                        self.progress_bar['value'] = val
+                        self.lbl_progress.config(text=f"{pct}% ({val}/{total}) - {text}")
+                    else:
+                        self.lbl_progress.config(text=text)
+                else:
+                    self.log_text.insert("end", str(item) + "\n")
+                    self.log_text.see("end")
+            except queue.Empty:
+                break
+        self.after(100, self._poll_log_queue)
+
+    def _update_progress(self, current, total, status_text="Processing..."):
+        self.log_queue.put(("PROGRESS", current, total, status_text))
 
     def _log(self, text):
         self.log_text.insert("end", text + "\n")
@@ -604,12 +658,24 @@ class ConverterGUI(tk.Tk):
             dest_dir = os.path.join(base_out_dir, output_name)
             self.last_output_dir = dest_dir
 
+            # Conflict / overwrite notice
+            if os.path.exists(dest_dir) and os.listdir(dest_dir):
+                self._log(f"NOTICE: Target directory '{output_name}' already exists. Merging/updating assets into existing folder.\n")
+
             self._log("\n" + "=" * 60)
             self._log(f"Converting assets into Mod Loader structure:\n  {dest_dir}\n")
 
             files_copied = 0
             folders_processed = 0
             processed_mod_folders = set()
+
+            # Count total files for progress bar
+            all_files_list = []
+            for root, dirs, files in os.walk(scan_dir):
+                for f in files:
+                    if not f.startswith("."):
+                        all_files_list.append(os.path.join(root, f))
+            total_files_count = len(all_files_list)
 
             # If option selections were made in mod.xml dialog, filter scan_dir items
             selected_option_folders = set()
@@ -618,6 +684,7 @@ class ConverterGUI(tk.Tk):
                     if opt_folder:
                         selected_option_folders.add(os.path.normpath(opt_folder).lower())
 
+            processed_file_index = 0
             for root, dirs, files in os.walk(scan_dir):
                 if not files:
                     continue
@@ -634,14 +701,12 @@ class ConverterGUI(tk.Tk):
                 # If option folders exist in this mod, check if top_level_folder is a configured option choice
                 top_folder_lower = parts[0].lower()
                 if selected_option_folders:
-                    # Check if parts[0] is an option folder that was NOT selected
                     all_option_folders = getattr(self, 'all_option_folders', set())
                     if top_folder_lower in all_option_folders and top_folder_lower not in selected_option_folders:
                         continue
 
                 matching_index = -1
                 matching_key = None
-                # Search backwards from leaf folder up to top parent to find the most specific match
                 for idx in range(len(parts) - 1, -1, -1):
                     part_lower = parts[idx].lower()
                     if part_lower in FOLDER_MAPPING:
@@ -657,15 +722,12 @@ class ConverterGUI(tk.Tk):
                         self._log(f"Processing [{folders_processed}]: {top_level_mod_name}")
 
                     target_base = FOLDER_MAPPING[matching_key]
-                    
-                    # Context-aware chocobo routing: if 'chocobo' is inside a 'minigame(s)' parent folder
                     if matching_key == "chocobo":
                         parent_parts_lower = [p.lower() for p in parts[:matching_index]]
                         if any(p in ["minigame", "minigames"] for p in parent_parts_lower):
                             target_base = os.path.join("minigame", "chocobo")
                     remaining_parts = parts[matching_index + 1:] if matching_index + 1 < len(parts) else []
                     
-                    # Prevent duplicate folder nesting (e.g. field/flevel/flevel -> field/flevel)
                     if remaining_parts and remaining_parts[0].lower() == os.path.basename(target_base).lower():
                         remaining_parts = remaining_parts[1:]
                         
@@ -673,6 +735,7 @@ class ConverterGUI(tk.Tk):
                     target_folder = os.path.join(dest_dir, target_base, sub_structure)
 
                     for file in files:
+                        processed_file_index += 1
                         if file.startswith("."):
                             continue
                         os.makedirs(target_folder, exist_ok=True)
@@ -680,15 +743,20 @@ class ConverterGUI(tk.Tk):
                         dst_file = os.path.join(target_folder, file)
                         shutil.copy2(src_file, dst_file)
                         files_copied += 1
+                        self._update_progress(processed_file_index, total_files_count, f"Copying {file}")
 
             self._log("\n" + "=" * 60)
             if files_copied > 0:
+                self._update_progress(total_files_count, total_files_count, "Conversion Complete!")
                 self._log(f"SUCCESS! Processed {folders_processed} folder(s) and merged {files_copied} asset file(s).")
                 self._log(f"Output folder created at:\n  {dest_dir}\n")
                 self._log("Next Step:")
                 self._log(f"Copy the '{output_name}' folder directly into your FFVII Steam 'mods/' folder!")
                 self.btn_open_folder.config(state="normal")
+                if detect_ffvii_mods_dir():
+                    self.btn_copy_steam.config(state="normal")
             else:
+                self._update_progress(0, 0, "No assets matched")
                 self._log("WARNING: No valid 7th Heaven mod files or recognized subfolders were found!")
                 self._log("Make sure the source contains subfolders like:")
                 self._log("  char, field, battle, magic, menu, world, music, sound, movies, stage, etc.")
@@ -712,6 +780,22 @@ class ConverterGUI(tk.Tk):
                     subprocess.run(["xdg-open", self.last_output_dir])
             except Exception as e:
                 messagebox.showerror("Error", f"Could not open output folder: {e}")
+
+    def _copy_to_steam_mods(self):
+        steam_mods = detect_ffvii_mods_dir()
+        if not steam_mods:
+            steam_mods = filedialog.askdirectory(title="Select FFVII Steam 'mods' Directory")
+
+        if steam_mods and self.last_output_dir and os.path.exists(self.last_output_dir):
+            target_dest = os.path.join(steam_mods, os.path.basename(self.last_output_dir))
+            try:
+                os.makedirs(steam_mods, exist_ok=True)
+                self._log(f"\nCopying mod folder directly to Steam mods directory:\n  {target_dest}")
+                shutil.copytree(self.last_output_dir, target_dest, dirs_exist_ok=True)
+                self._log(f"✅ Successfully installed mod to:\n  {target_dest}\n")
+                messagebox.showinfo("Success", f"Mod installed to Steam FFVII mods directory!\n\nLocation:\n{target_dest}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to copy mod to Steam mods folder: {e}")
 
 if __name__ == "__main__":
     app = ConverterGUI()
