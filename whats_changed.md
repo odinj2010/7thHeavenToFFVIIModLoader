@@ -4,6 +4,8 @@
 - Fixed `.iro` archive unpacking for `Remastered Backgrounds.iro` and similar mods by implementing proper bitmask checking (`flags & 1` for LZMA, `flags & 2` for Deflate/zlib).
 - Added multi-stage fallback decompression for zlib streams lacking standard headers (raw DEFLATE `-MAX_WBITS` & gzip headers).
 - Deep backward path matching: Scans full directory paths to locate target asset folders (`char`, `flevel`, `battle`, etc.) even when nested under arbitrary IroNite or 7th Heaven subfolders.
+- Duplicate archive nesting normalization: Prevents duplicate nested paths (e.g. `field/flevel/flevel/ancnt1` -> `field/flevel/ancnt1`).
+- Interactive `mod.xml` Option Parser (WIP / Experimental): Parses `<Group>`/`<Option>` and `<ConfigOption>` XML schemas to present option selection dialogs during conversion.
 - Diagnostic troubleshooting output: If 0 files match, prints clear guidance on expected subfolder names instead of falsely reporting success.
 - Expanded folder mapping: Added support for `wm`, `textures`, `override`, and `direct`.
 
