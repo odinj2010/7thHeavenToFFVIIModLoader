@@ -7,6 +7,7 @@ import struct
 import zlib
 import lzma
 import xml.etree.ElementTree as ET
+import queue
 import tempfile
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -103,7 +104,17 @@ class IroArchive:
     def __init__(self, filepath):
         self.filepath = filepath
         self.entries = []
+        self._handle = None
         self._read_header()
+
+    def __enter__(self):
+        self._handle = open(self.filepath, 'rb')
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._handle:
+            self._handle.close()
+            self._handle = None
 
     def _read_header(self):
         with open(self.filepath, 'rb') as f:
@@ -124,8 +135,18 @@ class IroArchive:
                     'length': data_len
                 })
 
-    def extract_entry(self, entry):
-        with open(self.filepath, 'rb') as f:
+    def extract_entry(self, entry, handle=None):
+        close_handle = False
+        if handle is None:
+            if self._handle is not None:
+                f = self._handle
+            else:
+                f = open(self.filepath, 'rb')
+                close_handle = True
+        else:
+            f = handle
+
+        try:
             f.seek(entry['offset'])
             data = f.read(entry['length'])
             flags = entry['flags']
@@ -168,20 +189,33 @@ class IroArchive:
                 return zlib.decompress(data, -zlib.MAX_WBITS)
             except Exception:
                 return data
+        finally:
+            if close_handle:
+                f.close()
 
     def extract_all(self, target_dir, log_func=None):
-        for entry in self.entries:
-            out_path = os.path.normpath(os.path.join(target_dir, entry['path']))
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
-            try:
-                content = self.extract_entry(entry)
-                with open(out_path, 'wb') as out_f:
-                    out_f.write(content)
-                if log_func:
-                    log_func(f"Unpacked: {entry['path']}")
-            except Exception as e:
-                if log_func:
-                    log_func(f"Error unpacking {entry['path']}: {e}")
+        target_dir_abs = os.path.abspath(target_dir)
+        
+        with self:
+            for entry in self.entries:
+                out_path = os.path.abspath(os.path.normpath(os.path.join(target_dir_abs, entry['path'])))
+                
+                # Zip-Slip Security Guard: Ensure target path doesn't escape target_dir_abs
+                if not out_path.startswith(target_dir_abs):
+                    if log_func:
+                        log_func(f"SECURITY WARNING: Skipped unsafe path traversal entry: {entry['path']}")
+                    continue
+
+                os.makedirs(os.path.dirname(out_path), exist_ok=True)
+                try:
+                    content = self.extract_entry(entry, handle=self._handle)
+                    with open(out_path, 'wb') as out_f:
+                        out_f.write(content)
+                    if log_func:
+                        log_func(f"Unpacked: {entry['path']}")
+                except Exception as e:
+                    if log_func:
+                        log_func(f"Error unpacking {entry['path']}: {e}")
 
 def parse_mod_xml_info(xml_path_or_content):
     groups = []
@@ -371,8 +405,23 @@ class ConverterGUI(tk.Tk):
         self.source_path_var = tk.StringVar(value=get_default_source_dir())
         self.output_name_var = tk.StringVar(value="1ModLoaderPack")
         self.last_output_dir = None
+        self.log_queue = queue.Queue()
 
         self._build_ui()
+        self._poll_log_queue()
+
+    def _poll_log_queue(self):
+        while not self.log_queue.empty():
+            try:
+                text = self.log_queue.get_nowait()
+                self.log_text.insert("end", text + "\n")
+                self.log_text.see("end")
+            except queue.Empty:
+                break
+        self.after(100, self._poll_log_queue)
+
+    def _log(self, text):
+        self.log_queue.put(text)
 
     def _build_ui(self):
         # Header

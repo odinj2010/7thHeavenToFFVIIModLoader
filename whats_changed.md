@@ -2,6 +2,9 @@
 
 ## [2.0.1] - Unreleased
 - Context-aware Chocobo routing: Resolved dictionary mapping collision; routes `chocobo.lgp`, `chocobo_race`, and minigame-nested folders to `minigame/chocobo/` while field chocobos map to `field/char/`.
+- Security: Implemented Zip-Slip path traversal protection in `IroArchive.extract_all` to validate destination target bounds.
+- Performance: Added context management (`__enter__` / `__exit__`) to `IroArchive` to reuse open file handles during batch extraction.
+- Stability: Added thread-safe `queue.Queue` log buffering and polling loop to eliminate UI thread race conditions.
 
 ## [2.0.0] - 2026-08-20
 - Fixed `.iro` archive unpacking for `Remastered Backgrounds.iro` and similar mods by implementing proper bitmask checking (`flags & 1` for LZMA, `flags & 2` for Deflate/zlib).
