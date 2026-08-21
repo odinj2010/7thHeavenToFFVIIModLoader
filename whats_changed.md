@@ -1,5 +1,8 @@
 # 7th Heaven to FFVIISE Mod Loader Converter - Changelog
 
+## [2.0.1] - Unreleased
+- Context-aware Chocobo routing: Resolved dictionary mapping collision; routes `chocobo.lgp`, `chocobo_race`, and minigame-nested folders to `minigame/chocobo/` while field chocobos map to `field/char/`.
+
 ## [2.0.0] - 2026-08-20
 - Fixed `.iro` archive unpacking for `Remastered Backgrounds.iro` and similar mods by implementing proper bitmask checking (`flags & 1` for LZMA, `flags & 2` for Deflate/zlib).
 - Added multi-stage fallback decompression for zlib streams lacking standard headers (raw DEFLATE `-MAX_WBITS` & gzip headers).

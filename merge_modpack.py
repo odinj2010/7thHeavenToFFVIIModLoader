@@ -17,7 +17,6 @@ FOLDER_MAPPING = {
     "char": os.path.join("field", "char"),
     "char.lgp": os.path.join("field", "char"),
     "chocobo": os.path.join("field", "char"),
-    "chocobo.lgp": os.path.join("field", "char"),
     "field": os.path.join("field", "flevel"),
     "flevel": os.path.join("field", "flevel"),
     "flevel.lgp": os.path.join("field", "flevel"),
@@ -51,6 +50,8 @@ FOLDER_MAPPING = {
     "high-us.lgp": os.path.join("minigame", "high-us"),
     "high.lgp": os.path.join("minigame", "high-us"),
     "chocobo_race": os.path.join("minigame", "chocobo"),
+    "chocoborace": os.path.join("minigame", "chocobo"),
+    "chocobo_racing": os.path.join("minigame", "chocobo"),
     "chocobo.lgp": os.path.join("minigame", "chocobo"),
     "sub": os.path.join("minigame", "sub"),
     "sub.lgp": os.path.join("minigame", "sub"),
@@ -607,6 +608,12 @@ class ConverterGUI(tk.Tk):
                         self._log(f"Processing [{folders_processed}]: {top_level_mod_name}")
 
                     target_base = FOLDER_MAPPING[matching_key]
+                    
+                    # Context-aware chocobo routing: if 'chocobo' is inside a 'minigame(s)' parent folder
+                    if matching_key == "chocobo":
+                        parent_parts_lower = [p.lower() for p in parts[:matching_index]]
+                        if any(p in ["minigame", "minigames"] for p in parent_parts_lower):
+                            target_base = os.path.join("minigame", "chocobo")
                     remaining_parts = parts[matching_index + 1:] if matching_index + 1 < len(parts) else []
                     
                     # Prevent duplicate folder nesting (e.g. field/flevel/flevel -> field/flevel)
