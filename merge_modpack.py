@@ -630,6 +630,37 @@ class ConverterGUI(tk.Tk):
                     mod_xml_path = os.path.join(scan_dir, item)
                     break
 
+            # Scan for incompatible FFNx / 1998 EXE patch files
+            incompatible_reasons = []
+            for root_dir, dir_names, file_names in os.walk(scan_dir):
+                for f_name in file_names:
+                    f_lower = f_name.lower()
+                    if f_lower.endswith(".hext"):
+                        incompatible_reasons.append(f"Hext EXE Memory Patch ({f_name})")
+                    elif f_lower in ["ffnx.toml", "ffnx.dll", "d3d8.dll", "ddraw.dll", "7thnum.dll"]:
+                        incompatible_reasons.append(f"Legacy FFNx Driver File ({f_name})")
+                for d_name in dir_names:
+                    if d_name.lower() == "hext":
+                        incompatible_reasons.append("Hext Code Patches Folder ('hext/')")
+
+            if incompatible_reasons:
+                unique_reasons = list(set(incompatible_reasons))
+                self._log("\n⚠️ INCOMPATIBILITY NOTICE:")
+                self._log("This mod contains legacy FFNx driver files or 1998 EXE memory patches:")
+                for r in unique_reasons:
+                    self._log(f"  • {r}")
+                self._log("Note: Asset files (textures, models, audio) will still convert, but executable code patches cannot run on the 64-bit Steam Edition.\n")
+                
+                # Show GUI Popup
+                def show_incompat_warning():
+                    msg = (
+                        "Warning: This mod contains FFNx driver plugins or 1998 'ff7.exe' Hext memory patches:\n\n"
+                        + "\n".join(f"• {r}" for r in unique_reasons[:5])
+                        + "\n\nAsset files (textures, models, audio) will convert normally, but code patches requiring the 1998 executable are not compatible with the 64-bit Steam Edition Mod Loader."
+                    )
+                    messagebox.showwarning("Incompatible Mod Features Detected", msg)
+                self.after(0, show_incompat_warning)
+
             if mod_xml_path and os.path.exists(mod_xml_path):
                 detected_name, groups = parse_mod_xml_info(mod_xml_path)
                 # If mod.xml specifies a name and user is using default name, update output_name
